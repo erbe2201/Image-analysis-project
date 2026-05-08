@@ -57,12 +57,11 @@ if __name__ == "__main__":
 
     fake_dataset = TensorDataset(fake_images, fake_labels)
     fake_loader = DataLoader(fake_dataset, batch_size=8)
-
+    epoch_num = 10
     # Test run for one time epoch
-    try:
-        loss, f1 = model_training(model, fake_loader, criterion, optimizer)
-        print("---Test Passed ---")
-        print(f"Test Loss: {loss:.4f}")
-        print(f"Test F1 Score: {f1:.4f}")
-    except Exception as e:
-        print(f"---Test Failed --- \nError: {e}")
+    for epoch in range(epoch_num):
+        try:
+            loss, f1 = model_training(model, fake_loader, criterion, optimizer)
+            print(f"Epoch [{epoch + 1}/{epoch_num}] - Loss: {loss:.4f}, F1 Score: {f1:.4f}")
+        except Exception as e:
+            print(f"---Test Failed --- \nError: {e}")
