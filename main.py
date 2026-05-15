@@ -6,23 +6,6 @@ from torchvision.transforms import ToTensor, Compose, Resize, RandomRotation
 from PIL import Image
 import os
 
-# Configuration
-DATASET_PATH = "gtsrb-german-traffic-sign/versions/1"
-NUM_CLASSES = 43
-EPOCHS = 10
-LEARNING_RATE = 0.001
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-MODEL_PATH = "gtsrb_model.pth"
-
-# 1. Load metadata and annotations
-meta_df = pd.read_csv(f"{DATASET_PATH}/Meta.csv")
-train_df = pd.read_csv(f"{DATASET_PATH}/Train.csv")
-test_df = pd.read_csv(f"{DATASET_PATH}/Test.csv")
-
-print(f"Number of classes: {len(meta_df)}")
-print(f"Training samples: {len(train_df)}")
-print(f"Test samples: {len(test_df)}")
-
 # 2. Create custom Dataset class
 class ReadDataset(Dataset):
     def __init__(self, dataframe, base_path, transform=None):
@@ -48,18 +31,6 @@ class ReadDataset(Dataset):
 
         return image, label
 
-# 3. Create datasets and dataloaders
-train_dataset = ReadDataset(train_df, DATASET_PATH)
-test_dataset = ReadDataset(test_df, DATASET_PATH)
-
-train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
-test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
-
-# Verify data loading
-for X, y in train_loader:
-    print(f"Batch shape: {X.shape}")
-    print(f"Labels shape: {y.shape}")
-    break
 
 # 4. Define CNN Model
 class TrafficSignCNN(nn.Module):
@@ -87,76 +58,111 @@ class TrafficSignCNN(nn.Module):
         x = self.classifier(x)
         return x
 
-# 5. Initialize model, loss, optimizer
-model = TrafficSignCNN(NUM_CLASSES).to(DEVICE)
-criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
+if __name__ == "__main__":
 
-# 6. Training function
-def train_epoch(model, train_loader, criterion, optimizer, device):
-    model.train()
-    total_loss = 0.0
-    correct = 0
-    total = 0
+    # Configuration
+    DATASET_PATH = r"C:\Users\Erik\Desktop\Image Analysis Dataset"
+    NUM_CLASSES = 43
+    EPOCHS = 10
+    LEARNING_RATE = 0.001
+    DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    MODEL_PATH = "gtsrb_model.pth"
 
+    # 1. Load metadata and annotations
+    meta_df = pd.read_csv(f"{DATASET_PATH}/Meta.csv")
+    train_df = pd.read_csv(f"{DATASET_PATH}/Train.csv")
+    test_df = pd.read_csv(f"{DATASET_PATH}/Test.csv")
+
+    print(f"Number of classes: {len(meta_df)}")
+    print(f"Training samples: {len(train_df)}")
+    print(f"Test samples: {len(test_df)}")
+
+
+
+    # 3. Create datasets and dataloaders
+    train_dataset = ReadDataset(train_df, DATASET_PATH)
+    test_dataset = ReadDataset(test_df, DATASET_PATH)
+
+    train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
+
+    # Verify data loading
     for X, y in train_loader:
-        X, y = X.to(device), y.to(device)
+        print(f"Batch shape: {X.shape}")
+        print(f"Labels shape: {y.shape}")
+        break
 
-        optimizer.zero_grad()
-        outputs = model(X)
-        loss = criterion(outputs, y)
-        loss.backward()
-        optimizer.step()
 
-        total_loss += loss.item()
-        _, predicted = torch.max(outputs.data, 1)
-        total += y.size(0)
-        correct += (predicted == y).sum().item()
+    # 5. Initialize model, loss, optimizer
+    model = TrafficSignCNN(NUM_CLASSES).to(DEVICE)
+    criterion = nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
-    avg_loss = total_loss / len(train_loader)
-    accuracy = 100 * correct / total
-    return avg_loss, accuracy
+    # 6. Training function
+    def train_epoch(model, train_loader, criterion, optimizer, device):
+        model.train()
+        total_loss = 0.0
+        correct = 0
+        total = 0
 
-# 7. Validation function
-def validate(model, test_loader, criterion, device):
-    model.eval()
-    total_loss = 0.0
-    correct = 0
-    total = 0
-
-    with torch.no_grad():
-        for X, y in test_loader:
+        for X, y in train_loader:
             X, y = X.to(device), y.to(device)
+
+            optimizer.zero_grad()
             outputs = model(X)
             loss = criterion(outputs, y)
+            loss.backward()
+            optimizer.step()
 
             total_loss += loss.item()
             _, predicted = torch.max(outputs.data, 1)
             total += y.size(0)
             correct += (predicted == y).sum().item()
 
-    avg_loss = total_loss / len(test_loader)
-    accuracy = 100 * correct / total
-    return avg_loss, accuracy
+        avg_loss = total_loss / len(train_loader)
+        accuracy = 100 * correct / total
+        return avg_loss, accuracy
 
-# 8. Train the model
-print(f"\nTraining on device: {DEVICE}\n")
-best_accuracy = 0.0
+    # 7. Validation function
+    def validate(model, test_loader, criterion, device):
+        model.eval()
+        total_loss = 0.0
+        correct = 0
+        total = 0
 
-for epoch in range(EPOCHS):
-    train_loss, train_acc = train_epoch(model, train_loader, criterion, optimizer, DEVICE)
-    val_loss, val_acc = validate(model, test_loader, criterion, DEVICE)
+        with torch.no_grad():
+            for X, y in test_loader:
+                X, y = X.to(device), y.to(device)
+                outputs = model(X)
+                loss = criterion(outputs, y)
 
-    print(f"Epoch [{epoch + 1}/{EPOCHS}]")
-    print(f"  Train - Loss: {train_loss:.4f}, Accuracy: {train_acc:.2f}%")
-    print(f"  Valid - Loss: {val_loss:.4f}, Accuracy: {val_acc:.2f}%")
+                total_loss += loss.item()
+                _, predicted = torch.max(outputs.data, 1)
+                total += y.size(0)
+                correct += (predicted == y).sum().item()
 
-    # Save best model
-    if val_acc > best_accuracy:
-        best_accuracy = val_acc
-        torch.save(model.state_dict(), MODEL_PATH)
-        print(f"  ✓ Model saved! (Best accuracy: {best_accuracy:.2f}%)")
-    print()
+        avg_loss = total_loss / len(test_loader)
+        accuracy = 100 * correct / total
+        return avg_loss, accuracy
 
-print(f"Training complete! Best model saved to '{MODEL_PATH}'")
-print(f"Best test accuracy: {best_accuracy:.2f}%")
+    # 8. Train the model
+    print(f"\nTraining on device: {DEVICE}\n")
+    best_accuracy = 0.0
+
+    for epoch in range(EPOCHS):
+        train_loss, train_acc = train_epoch(model, train_loader, criterion, optimizer, DEVICE)
+        val_loss, val_acc = validate(model, test_loader, criterion, DEVICE)
+
+        print(f"Epoch [{epoch + 1}/{EPOCHS}]")
+        print(f"  Train - Loss: {train_loss:.4f}, Accuracy: {train_acc:.2f}%")
+        print(f"  Valid - Loss: {val_loss:.4f}, Accuracy: {val_acc:.2f}%")
+
+        # Save best model
+        if val_acc > best_accuracy:
+            best_accuracy = val_acc
+            torch.save(model.state_dict(), MODEL_PATH)
+            print(f"  ✓ Model saved! (Best accuracy: {best_accuracy:.2f}%)")
+        print()
+
+    print(f"Training complete! Best model saved to '{MODEL_PATH}'")
+    print(f"Best test accuracy: {best_accuracy:.2f}%")

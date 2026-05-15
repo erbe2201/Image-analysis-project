@@ -2,8 +2,8 @@ import torch
 import torchvision.models as models
 import torch.nn as nn
 
-print(f"PyTorch version: {torch.__version__}")
-print(f"Is CUDA (GPU) available? {torch.cuda.is_available()}")
+#print(f"PyTorch version: {torch.__version__}")
+#print(f"Is CUDA (GPU) available? {torch.cuda.is_available()}")
 
 def resnet_traffic_sign_model(sign_classes=43):
     #Pre-trained model weights
